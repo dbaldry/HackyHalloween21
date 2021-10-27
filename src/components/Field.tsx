@@ -228,7 +228,7 @@ function SchemaObject({ name, properties, defs, value, onChange }) {
     value[key] = newValue;
     onChange(value);
   };
-
+console.log (value)
   return (
     <Flex
       flexDirection={propertyKeys.length > 2 ? "column" : "row"}
@@ -258,7 +258,7 @@ function SchemaForm({ name = null, schema, defs = {}, onChange, value }) {
     case "string":
     case "number":
     case "integer":
-    case "boolean":
+    case "boolean": 
       return (
         <SchemaField
           name={name}
@@ -326,7 +326,8 @@ const Field = (props: FieldProps) => {
     sdk,
     sdk: { window },
   } = props;
-  const schema = JSON.parse(rawSchema);
+
+  const schema = {} // JSON.parse(rawSchema);
 
   const [value, setValue] = useState(schemaGetInitialValue(schema));
 
@@ -358,7 +359,7 @@ const Field = (props: FieldProps) => {
       },
     }
   );
-  // Why doens't this work?????
+  // Why doesn't this work?????
   // const cma = createClient(
   //   { apiAdapter: sdk.cmaAdapter },
   //   {
@@ -393,20 +394,30 @@ const Field = (props: FieldProps) => {
 
         console.log(jsonEntry);
         if (jsonEntry.length === 1) {
+          console.log (jsonEntry[0].fields.schema["en-US"])
           setJsonEditorConfig({
             JSONSchema: jsonEntry[0].fields.schema["en-US"],
           });
+          
         }
       })
       .catch((error) => console.log(error.message));
   }, []);
+
+  // useEffect(() => {
+  //   console.log("schema changed")
+  //   const schema = jsonEditorConfig.JSONSchema
+  //   console.log("Using schema " + JSON.stringify(schema))
+  //   setValue ( schemaGetInitialValue(schema))
+  
+  // }, [jsonEditorConfig]);
 
   return (
     <>
       <div style={{ background: "black", color: "white" }}>
         {JSON.stringify(value)}
       </div>
-      <SchemaForm schema={schema} onChange={handleChange} value={value} />
+      <SchemaForm schema={jsonEditorConfig.JSONSchema} onChange={handleChange} value={value} />
     </>
   );
 };
