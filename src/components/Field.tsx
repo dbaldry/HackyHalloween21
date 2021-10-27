@@ -65,6 +65,12 @@ const rawSchema = `{
         "veggiesLike": {
           "type": "boolean",
           "description": "Do I like this vegetable?"
+        },
+        "dishes": {
+          "type": "array",
+          "items": {
+            "type": "#/$defs/dish"
+          }
         }
       }
     },
@@ -123,7 +129,7 @@ function SchemaField({ name, type, description, value, onChange }) {
   }
 }
 
-function SchemaArray({ name, items, defs, value, onChange }) {
+function SchemaArray({ name, items, defs, value = [], onChange }) {
   let entries = [...value];
   console.log("ENTRIES", entries);
 
