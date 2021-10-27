@@ -69,7 +69,7 @@ const rawSchema = `{
         "dishes": {
           "type": "array",
           "items": {
-            "type": "#/$defs/dish"
+            "$ref": "#/$defs/dish"
           }
         }
       }
@@ -118,7 +118,6 @@ function SchemaField({ name, type, description, value, onChange }) {
               checked={value || false}
               value="yes"
               onChange={(e) => {
-                console.log(e);
                 onChange(!value);
               }}
               id="termsCheckbox"
@@ -131,7 +130,6 @@ function SchemaField({ name, type, description, value, onChange }) {
 
 function SchemaArray({ name, items, defs, value = [], onChange }) {
   let entries = [...value];
-  console.log("ENTRIES", entries);
 
   const handleAddItem = () => {
     if (typeof items.$ref !== "undefined") {
@@ -334,9 +332,14 @@ const Field = (props: FieldProps) => {
   } = props;
   const schema = JSON.parse(rawSchema);
 
-  const [value, setValue] = useState(schemaGetInitialValue(schema));
+  // See if we already have a field value
+  const initialValue = sdk.field.getValue() || schemaGetInitialValue(schema);
+  const [value, setValue] = useState(initialValue);
 
   const handleChange = (newValue) => {
+    // Set the field value first
+    sdk.field.setValue(newValue).then(console.log).catch(console.log);
+
     if (typeof newValue === "object") {
       setValue({ ...newValue });
       return;
@@ -348,8 +351,6 @@ const Field = (props: FieldProps) => {
   window.startAutoResizer();
 
   const thisFieldId = sdk.field.id;
-
-  console.log("Got field " + thisFieldId);
 
   let [jsonEditorConfig, setJsonEditorConfig] = useState({ JSONSchema: {} });
   const cma = createClient(
@@ -407,14 +408,7 @@ const Field = (props: FieldProps) => {
       .catch((error) => console.log(error.message));
   }, []);
 
-  return (
-    <>
-      <div style={{ background: "black", color: "white" }}>
-        {JSON.stringify(value)}
-      </div>
-      <SchemaForm schema={schema} onChange={handleChange} value={value} />
-    </>
-  );
+  return <SchemaForm schema={schema} onChange={handleChange} value={value} />;
 };
 
 export default Field;
