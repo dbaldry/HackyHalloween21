@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Paragraph,
   TextField,
@@ -11,10 +11,12 @@ import {
   Button,
 } from "@contentful/forma-36-react-components";
 import { FieldExtensionSDK } from "@contentful/app-sdk";
+import { createClient } from "contentful-management";
 
 interface FieldProps {
   sdk: FieldExtensionSDK;
 }
+const CMATOKEN = "CFPAT-VLSyuX0lRDVtctQJvh11JeJtpZLo4DFPLJzYiRtBzZ8";
 
 /**
  * JSON Schema Types:
@@ -126,10 +128,9 @@ function SchemaArray({ name, items, defs, value, onChange }) {
   console.log("ENTRIES", entries);
 
   const handleAddItem = () => {
-    if(typeof items.$ref !== "undefined") {
-      entries.push({})
-    }
-    else {
+    if (typeof items.$ref !== "undefined") {
+      entries.push({});
+    } else {
       entries.push("");
     }
     onChange(entries);
@@ -160,7 +161,8 @@ function SchemaArray({ name, items, defs, value, onChange }) {
                     schema={items}
                     defs={defs}
                     value={val}
-                    onChange={(newValue) => handleChange(newValue, index)} />
+                    onChange={(newValue) => handleChange(newValue, index)}
+                  />
                 </Flex>
                 <Flex>
                   <Button
@@ -320,7 +322,10 @@ function schemaGetInitialValue(schema) {
 }
 
 const Field = (props: FieldProps) => {
-  const { window } = props.sdk;
+  const {
+    sdk,
+    sdk: { window },
+  } = props;
   const schema = JSON.parse(rawSchema);
 
   const [value, setValue] = useState(schemaGetInitialValue(schema));
@@ -335,6 +340,66 @@ const Field = (props: FieldProps) => {
 
   // Start the auto resizer so the field only takes up the space it needs
   window.startAutoResizer();
+
+  const thisFieldId = sdk.field.id;
+
+  console.log("Got field " + thisFieldId);
+
+  let [jsonEditorConfig, setJsonEditorConfig] = useState({ JSONSchema: {} });
+  const cma = createClient(
+    {
+      accessToken: CMATOKEN,
+    },
+    {
+      type: "plain",
+      defaults: {
+        environmentId: sdk.ids.environment,
+        spaceId: sdk.ids.space,
+      },
+    }
+  );
+  // Why doens't this work?????
+  // const cma = createClient(
+  //   { apiAdapter: sdk.cmaAdapter },
+  //   {
+  //     type: 'plain',
+  //     defaults: {
+  //       environmentId: sdk.ids.environment,
+  //       spaceId: sdk.ids.space,
+  //     },
+  //   }
+  // )
+  // const cma = contentful.createClient(
+  //   { apiAdapter: sdk.cmaAdapter },
+  //   {
+  //     type: 'plain',
+  //     defaults: {
+  //       environmentId: sdk.ids.environment,
+  //       spaceId: sdk.ids.space,
+  //     },
+  //   }
+  // )
+
+  useEffect(() => {
+    // TODO - how to filter by title field? - this approach not great if we had many
+
+    cma.entry
+      .getMany({ query: { content_type: "jsonSchema" } })
+      .then((data) => {
+        let arrItems = data.items;
+        let jsonEntry = arrItems.filter((item) => {
+          return item.fields.title["en-US"] === thisFieldId;
+        });
+
+        console.log(jsonEntry);
+        if (jsonEntry.length === 1) {
+          setJsonEditorConfig({
+            JSONSchema: jsonEntry[0].fields.schema["en-US"],
+          });
+        }
+      })
+      .catch((error) => console.log(error.message));
+  }, []);
 
   return (
     <>
