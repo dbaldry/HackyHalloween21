@@ -1,3 +1,4 @@
+// NOT USED - SEE APPVIEW
 import React, { useCallback, useState, useEffect } from 'react';
 import { AppExtensionSDK } from '@contentful/app-sdk';
 import { Heading, Form, Workbench, Paragraph } from '@contentful/forma-36-react-components';

@@ -16,7 +16,8 @@ import '@contentful/forma-36-fcss/dist/styles.css';
 import '@contentful/forma-36-tokens/dist/css/index.css';
 import './index.css';
 
-import Config from './components/ConfigScreen';
+// import Config from './components/ConfigScreen';
+import { AppView } from './components/AppView';
 import EntryEditor from './components/EntryEditor';
 import Page from './components/Page';
 import Sidebar from './components/Sidebar';
@@ -36,10 +37,14 @@ if (process.env.NODE_ENV === 'development' && window.self === window.top) {
     // All possible locations for your app
     // Feel free to remove unused locations
     // Dont forget to delete the file too :)
+    // {
+    //   location: locations.LOCATION_APP_CONFIG,
+    //   component: <Config sdk={sdk as AppExtensionSDK} />,
+    // }
     const ComponentLocationSettings = [
       {
         location: locations.LOCATION_APP_CONFIG,
-        component: <Config sdk={sdk as AppExtensionSDK} />,
+        component: <AppView sdk={sdk as AppExtensionSDK} />
       },
       {
         location: locations.LOCATION_ENTRY_FIELD,
