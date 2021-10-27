@@ -65,6 +65,12 @@ const rawSchema = `{
         "veggiesLike": {
           "type": "boolean",
           "description": "Do I like this vegetable?"
+        },
+        "dishes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dish"
+          }
         }
       }
     },
@@ -84,48 +90,47 @@ const rawSchema = `{
   }
 }`;
 
-function SchemaField({ name, type, description, value, onChange }) {
-  switch (type) {
-    case "string":
-    case "number": // TODO: Better field type for number??
-    case "integer": // TODO: Better field type for integer??
-      return (
-        <Flex marginBottom="spacingL">
-          <Flex flexGrow="1">
-            <TextField
+function SchemaField({
+  name,
+  type,
+  description,
+  value,
+  onChange,
+  noSpacing = false,
+}) {
+  return (
+    <Flex marginBottom={noSpacing ? "none" : "spacingL"} fullWidth>
+      <Flex flexGrow="1" flexDirection="column">
+        {["string", "number", "integer"].includes(type) && (
+          <>
+            {name && <FormLabel>{name}</FormLabel>}
+            <TextInput
               // required
-              labelText={name || null}
+              labelText={name || ""}
               value={value || ""}
               helpText={description || null}
               onChange={(e) => onChange(e.target.value)}
             />
-          </Flex>
-        </Flex>
-      );
+          </>
+        )}
 
-    case "boolean":
-      return (
-        <Flex marginBottom="spacingL">
-          <Flex flexGrow="1">
-            <CheckboxField
-              labelText={name || "Switch on"}
-              checked={value || false}
-              value="yes"
-              onChange={(e) => {
-                console.log(e);
-                onChange(!value);
-              }}
-              id="termsCheckbox"
-            />
-          </Flex>
-        </Flex>
-      );
-  }
+        {["boolean"].includes(type) && (
+          <CheckboxField
+            labelText={name || "Switch on"}
+            checked={value || false}
+            value="yes"
+            onChange={(e) => {
+              onChange(!value);
+            }}
+          />
+        )}
+      </Flex>
+    </Flex>
+  );
 }
 
-function SchemaArray({ name, items, defs, value, onChange }) {
+function SchemaArray({ name, items, defs, value = [], onChange }) {
   let entries = [...value];
-  console.log("ENTRIES", entries);
 
   const handleAddItem = () => {
     if (typeof items.$ref !== "undefined") {
@@ -146,7 +151,6 @@ function SchemaArray({ name, items, defs, value, onChange }) {
     onChange(entries);
   };
 
-  // TODO: Handle numbers and integers better??
   return (
     <Flex marginBottom="spacingL" flexGrow="1">
       <Flex flexGrow="1" flexDirection="column">
@@ -155,13 +159,18 @@ function SchemaArray({ name, items, defs, value, onChange }) {
           <>
             {/* Handle basic field types */}
             {typeof items.type !== "undefined" && (
-              <Flex flexWrap="nowrap" marginBottom="spacingXs">
+              <Flex
+                flexWrap="nowrap"
+                marginBottom="spacingXs"
+                alignItems="center"
+              >
                 <Flex flexGrow="1" paddingRight="spacingS">
                   <SchemaForm
                     schema={items}
                     defs={defs}
                     value={val}
                     onChange={(newValue) => handleChange(newValue, index)}
+                    noSpacing
                   />
                 </Flex>
                 <Flex>
@@ -178,10 +187,10 @@ function SchemaArray({ name, items, defs, value, onChange }) {
 
             {/* Handle complex field types */}
             {typeof items.$ref !== "undefined" && (
-              <Flex marginBottom="spacingM" flexGrow="1">
+              <Flex marginBottom="spacingXs" flexGrow="1">
                 <Card style={{ flexGrow: "1" }}>
                   <Flex flexWrap="wrap" marginBottom="spacingXs">
-                    <Flex flexGrow="1">
+                    <Flex flexGrow="1" paddingRight="spacingS">
                       <SchemaForm
                         schema={defs[items.$ref.split("/").at(-1)]}
                         defs={defs}
@@ -230,10 +239,7 @@ function SchemaObject({ name, properties, defs, value, onChange }) {
   };
 console.log (value)
   return (
-    <Flex
-      flexDirection={propertyKeys.length > 2 ? "column" : "row"}
-      flexGrow="1"
-    >
+    <Flex flexDirection="column" flexGrow="1">
       {propertyKeys.map((key) => (
         <Flex flexGrow="1">
           <SchemaForm
@@ -249,7 +255,14 @@ console.log (value)
   );
 }
 
-function SchemaForm({ name = null, schema, defs = {}, onChange, value }) {
+function SchemaForm({
+  name = null,
+  schema,
+  defs = {},
+  onChange,
+  value,
+  noSpacing = false,
+}) {
   if (typeof schema?.$defs !== "undefined") {
     defs = { ...defs, ...schema.$defs };
   }
@@ -266,6 +279,7 @@ function SchemaForm({ name = null, schema, defs = {}, onChange, value }) {
           description={schema.description}
           value={value}
           onChange={onChange}
+          noSpacing={noSpacing}
         />
       );
 
@@ -329,9 +343,14 @@ const Field = (props: FieldProps) => {
 
   const schema = {} // JSON.parse(rawSchema);
 
-  const [value, setValue] = useState(schemaGetInitialValue(schema));
+  // See if we already have a field value
+  const initialValue = sdk.field.getValue() || schemaGetInitialValue(schema);
+  const [value, setValue] = useState(initialValue);
 
   const handleChange = (newValue) => {
+    // Set the field value first
+    sdk.field.setValue(newValue).then(console.log).catch(console.log);
+
     if (typeof newValue === "object") {
       setValue({ ...newValue });
       return;
@@ -343,8 +362,6 @@ const Field = (props: FieldProps) => {
   window.startAutoResizer();
 
   const thisFieldId = sdk.field.id;
-
-  console.log("Got field " + thisFieldId);
 
   let [jsonEditorConfig, setJsonEditorConfig] = useState({ JSONSchema: {} });
   const cma = createClient(
@@ -404,22 +421,7 @@ const Field = (props: FieldProps) => {
       .catch((error) => console.log(error.message));
   }, []);
 
-  // useEffect(() => {
-  //   console.log("schema changed")
-  //   const schema = jsonEditorConfig.JSONSchema
-  //   console.log("Using schema " + JSON.stringify(schema))
-  //   setValue ( schemaGetInitialValue(schema))
-  
-  // }, [jsonEditorConfig]);
-
-  return (
-    <>
-      <div style={{ background: "black", color: "white" }}>
-        {JSON.stringify(value)}
-      </div>
-      <SchemaForm schema={jsonEditorConfig.JSONSchema} onChange={handleChange} value={value} />
-    </>
-  );
+  return <SchemaForm schema={jsonEditorConfig.JSONSchema} onChange={handleChange} value={value} />;
 };
 
 export default Field;
