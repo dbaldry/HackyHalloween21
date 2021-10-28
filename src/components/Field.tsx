@@ -12,83 +12,11 @@ import {
 } from "@contentful/forma-36-react-components";
 import { FieldExtensionSDK } from "@contentful/app-sdk";
 import { createClient } from "contentful-management";
+import { initial } from "lodash";
 
 interface FieldProps {
   sdk: FieldExtensionSDK;
 }
-const CMATOKEN = "CFPAT-VLSyuX0lRDVtctQJvh11JeJtpZLo4DFPLJzYiRtBzZ8";
-
-/**
- * JSON Schema Types:
- * - string
- * - number
- * - integer
- * - object
- * - array
- * - boolean
- * - null
- */
-
-// Dummy schema for use
-const rawSchema = `{
-  "$id": "https://example.com/arrays.schema.json",
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "A representation of a person, company, organization, or place",
-  "type": "object",
-  "properties": {
-    "textFieldExample": {
-      "type": "string"
-    },
-    "boolExample": {
-      "type": "boolean"
-    },
-    "fruits": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      }
-    },
-    "vegetables": {
-      "type": "array",
-      "items": { "$ref": "#/$defs/veggie" }
-    }
-  },
-  "$defs": {
-    "veggie": {
-      "type": "object",
-      "required": [ "veggieName", "veggieLike" ],
-      "properties": {
-        "veggieName": {
-          "type": "string",
-          "description": "The name of the vegetable."
-        },
-        "veggiesLike": {
-          "type": "boolean",
-          "description": "Do I like this vegetable?"
-        },
-        "dishes": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/dish"
-          }
-        }
-      }
-    },
-    "dish": {
-      "type": "object",
-      "properties": {
-        "dishName": {
-          "type": "string",
-          "description": "The name of the dish."
-        },
-        "forBeginners": {
-          "type": "boolean",
-          "description": "Is this an easy dish?"
-        }
-      }
-    }
-  }
-}`;
 
 function SchemaField({
   name,
@@ -237,7 +165,7 @@ function SchemaObject({ name, properties, defs, value, onChange }) {
     value[key] = newValue;
     onChange(value);
   };
-console.log (value)
+
   return (
     <Flex flexDirection="column" flexGrow="1">
       {propertyKeys.map((key) => (
@@ -344,7 +272,8 @@ const Field = (props: FieldProps) => {
   const schema = {} // JSON.parse(rawSchema);
 
   // See if we already have a field value
-  const initialValue = sdk.field.getValue() || schemaGetInitialValue(schema);
+  const initialValue = sdk.field.getValue();
+  
   const [value, setValue] = useState(initialValue);
 
   const handleChange = (newValue) => {
@@ -364,43 +293,20 @@ const Field = (props: FieldProps) => {
   const thisFieldId = sdk.field.id;
 
   let [jsonEditorConfig, setJsonEditorConfig] = useState({ JSONSchema: {} });
+  
   const cma = createClient(
+    { apiAdapter: sdk.cmaAdapter },
     {
-      accessToken: CMATOKEN,
-    },
-    {
-      type: "plain",
+      type: 'plain',
       defaults: {
         environmentId: sdk.ids.environment,
         spaceId: sdk.ids.space,
       },
     }
   );
-  // Why doesn't this work?????
-  // const cma = createClient(
-  //   { apiAdapter: sdk.cmaAdapter },
-  //   {
-  //     type: 'plain',
-  //     defaults: {
-  //       environmentId: sdk.ids.environment,
-  //       spaceId: sdk.ids.space,
-  //     },
-  //   }
-  // )
-  // const cma = contentful.createClient(
-  //   { apiAdapter: sdk.cmaAdapter },
-  //   {
-  //     type: 'plain',
-  //     defaults: {
-  //       environmentId: sdk.ids.environment,
-  //       spaceId: sdk.ids.space,
-  //     },
-  //   }
-  // )
 
   useEffect(() => {
     // TODO - how to filter by title field? - this approach not great if we had many
-
     cma.entry
       .getMany({ query: { content_type: "jsonSchema" } })
       .then((data) => {
@@ -409,9 +315,9 @@ const Field = (props: FieldProps) => {
           return item.fields.title["en-US"] === thisFieldId;
         });
 
-        console.log(jsonEntry);
         if (jsonEntry.length === 1) {
-          console.log (jsonEntry[0].fields.schema["en-US"])
+          // Set the initial value if necessary
+          setValue(sdk.field.getValue() || schemaGetInitialValue(jsonEntry[0].fields.schema["en-US"]));
           setJsonEditorConfig({
             JSONSchema: jsonEntry[0].fields.schema["en-US"],
           });
