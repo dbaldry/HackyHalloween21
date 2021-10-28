@@ -16,7 +16,8 @@ import { createClient } from "contentful-management";
 interface FieldProps {
   sdk: FieldExtensionSDK;
 }
-const CMATOKEN = "CFPAT-VLSyuX0lRDVtctQJvh11JeJtpZLo4DFPLJzYiRtBzZ8";
+// TODO - move to env file
+const CMATOKEN = "ENTER YOUR OWN CMA KEY";
 
 /**
  * JSON Schema Types:
