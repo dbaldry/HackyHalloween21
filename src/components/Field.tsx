@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import {
   Paragraph,
-  TextField,
   CheckboxField,
   FormLabel,
   TextInput,
@@ -12,7 +11,6 @@ import {
 } from "@contentful/forma-36-react-components";
 import { FieldExtensionSDK } from "@contentful/app-sdk";
 import { createClient } from "contentful-management";
-import { initial } from "lodash";
 
 interface FieldProps {
   sdk: FieldExtensionSDK;
@@ -268,8 +266,6 @@ const Field = (props: FieldProps) => {
     sdk,
     sdk: { window },
   } = props;
-
-  const schema = {} // JSON.parse(rawSchema);
 
   // See if we already have a field value
   const initialValue = sdk.field.getValue();
