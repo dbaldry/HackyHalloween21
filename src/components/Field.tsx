@@ -56,7 +56,10 @@ function SchemaField({
 }
 
 function SchemaArray({ name, items, defs, value = [], onChange }) {
-  let entries = [...value];
+  console.log("VALUE", value);
+  let entries = [];
+  if (typeof value == "object" && value.length > 0) entries = [...value];
+  console.log("ENTRIES", entries);
 
   const handleAddItem = () => {
     if (typeof items.$ref !== "undefined") {
@@ -64,6 +67,7 @@ function SchemaArray({ name, items, defs, value = [], onChange }) {
     } else {
       entries.push("");
     }
+    console.log("CHANGING ENTRIES", entries);
     onChange(entries);
   };
 
@@ -197,7 +201,7 @@ function SchemaForm({
     case "string":
     case "number":
     case "integer":
-    case "boolean": 
+    case "boolean":
       return (
         <SchemaField
           name={name}
@@ -269,7 +273,7 @@ const Field = (props: FieldProps) => {
 
   // See if we already have a field value
   const initialValue = sdk.field.getValue();
-  
+
   const [value, setValue] = useState(initialValue);
 
   const handleChange = (newValue) => {
@@ -277,9 +281,18 @@ const Field = (props: FieldProps) => {
     sdk.field.setValue(newValue).then(console.log).catch(console.log);
 
     if (typeof newValue === "object") {
+      // Is it an array?
+      if(Object.prototype.toString.call(newValue) === '[object Array]') {
+        setValue([...newValue]);
+        return;
+      }
+
+      // It must be an object then
       setValue({ ...newValue });
       return;
     }
+
+    // String or number or bool can be handled like this
     setValue(newValue);
   };
 
@@ -289,11 +302,11 @@ const Field = (props: FieldProps) => {
   const thisFieldId = sdk.field.id;
 
   let [jsonEditorConfig, setJsonEditorConfig] = useState({ JSONSchema: {} });
-  
+
   const cma = createClient(
     { apiAdapter: sdk.cmaAdapter },
     {
-      type: 'plain',
+      type: "plain",
       defaults: {
         environmentId: sdk.ids.environment,
         spaceId: sdk.ids.space,
@@ -313,17 +326,25 @@ const Field = (props: FieldProps) => {
 
         if (jsonEntry.length === 1) {
           // Set the initial value if necessary
-          setValue(sdk.field.getValue() || schemaGetInitialValue(jsonEntry[0].fields.schema["en-US"]));
+          setValue(
+            sdk.field.getValue() ||
+              schemaGetInitialValue(jsonEntry[0].fields.schema["en-US"])
+          );
           setJsonEditorConfig({
             JSONSchema: jsonEntry[0].fields.schema["en-US"],
           });
-          
         }
       })
       .catch((error) => console.log(error.message));
   }, []);
 
-  return <SchemaForm schema={jsonEditorConfig.JSONSchema} onChange={handleChange} value={value} />;
+  return (
+    <SchemaForm
+      schema={jsonEditorConfig.JSONSchema}
+      onChange={handleChange}
+      value={value}
+    />
+  );
 };
 
 export default Field;
