@@ -7,7 +7,11 @@ import {
   TextInput,
   Card,
   Flex,
+  HelpText,
   Button,
+  Tooltip,
+  TextLink,
+  Tag,
 } from "@contentful/forma-36-react-components";
 import { FieldExtensionSDK } from "@contentful/app-sdk";
 import { createClient } from "contentful-management";
@@ -17,26 +21,32 @@ interface FieldProps {
 }
 
 function SchemaField({
-  name,
+  name = null,
+  title = null,
   type,
-  description,
+  description = null,
   value,
   onChange,
   noSpacing = false,
 }) {
+  console.log(title, name);
+  const label = title ? title : name;
+
   return (
     <Flex marginBottom={noSpacing ? "none" : "spacingL"} fullWidth>
       <Flex flexGrow="1" flexDirection="column">
         {["string", "number", "integer"].includes(type) && (
           <>
-            {name && <FormLabel>{name}</FormLabel>}
+            {label && <FormLabel>{label}</FormLabel>}
             <TextInput
               // required
               labelText={name || ""}
               value={value || ""}
               helpText={description || null}
               onChange={(e) => onChange(e.target.value)}
+              className={description ? "f36-margin-bottom--xs" : ""}
             />
+            {description && <HelpText>{description}</HelpText>}
           </>
         )}
 
@@ -55,11 +65,17 @@ function SchemaField({
   );
 }
 
-function SchemaArray({ name, items, defs, value = [], onChange }) {
-  console.log("VALUE", value);
+function SchemaArray({
+  name,
+  title = null,
+  description = null,
+  items,
+  defs,
+  value = [],
+  onChange,
+}) {
   let entries = [];
   if (typeof value == "object" && value.length > 0) entries = [...value];
-  console.log("ENTRIES", entries);
 
   const handleAddItem = () => {
     if (typeof items.$ref !== "undefined") {
@@ -67,7 +83,6 @@ function SchemaArray({ name, items, defs, value = [], onChange }) {
     } else {
       entries.push("");
     }
-    console.log("CHANGING ENTRIES", entries);
     onChange(entries);
   };
 
@@ -84,7 +99,14 @@ function SchemaArray({ name, items, defs, value = [], onChange }) {
   return (
     <Flex marginBottom="spacingL" flexGrow="1">
       <Flex flexGrow="1" flexDirection="column">
-        <FormLabel>{name}</FormLabel>
+        <FormLabel>
+          {title || name}{" "}
+          {description && (
+            <Tooltip content={description}>
+              <Tag>?</Tag>
+            </Tooltip>
+          )}
+        </FormLabel>
         {entries.map((val, index) => (
           <>
             {/* Handle basic field types */}
@@ -159,7 +181,15 @@ function SchemaArray({ name, items, defs, value = [], onChange }) {
   );
 }
 
-function SchemaObject({ name, properties, defs, value, onChange }) {
+function SchemaObject({
+  name,
+  title = null,
+  description = null,
+  properties,
+  defs,
+  value,
+  onChange,
+}) {
   // Iterate through each property and create a form from each
   const propertyKeys = Object.keys(properties);
 
@@ -169,18 +199,32 @@ function SchemaObject({ name, properties, defs, value, onChange }) {
   };
 
   return (
-    <Flex flexDirection="column" flexGrow="1">
-      {propertyKeys.map((key) => (
-        <Flex flexGrow="1">
-          <SchemaForm
-            name={key}
-            schema={properties[key]}
-            defs={defs}
-            value={value[key]}
-            onChange={(newValue) => handleChange(newValue, key)}
-          />
+    <Flex flexGrow="1">
+      <Flex flexGrow="1" flexDirection="column">
+        {(title || name) && (
+          <FormLabel>
+            {title || name}{" "}
+            {description && (
+              <Tooltip content={description}>
+                <Tag>?</Tag>
+              </Tooltip>
+            )}
+          </FormLabel>
+        )}
+        <Flex flexDirection="column" flexGrow="1">
+          {propertyKeys.map((key) => (
+            <Flex flexGrow="1">
+              <SchemaForm
+                name={key}
+                schema={properties[key]}
+                defs={defs}
+                value={value[key]}
+                onChange={(newValue) => handleChange(newValue, key)}
+              />
+            </Flex>
+          ))}
         </Flex>
-      ))}
+      </Flex>
     </Flex>
   );
 }
@@ -205,8 +249,9 @@ function SchemaForm({
       return (
         <SchemaField
           name={name}
+          title={schema.title || null}
           type={schema.type}
-          description={schema.description}
+          description={schema.description || null}
           value={value}
           onChange={onChange}
           noSpacing={noSpacing}
@@ -217,6 +262,8 @@ function SchemaForm({
       return (
         <SchemaObject
           name={name}
+          title={schema.title || null}
+          description={schema.description || null}
           properties={schema.properties}
           defs={defs}
           value={value}
@@ -228,6 +275,8 @@ function SchemaForm({
       return (
         <SchemaArray
           name={name}
+          title={schema.title || null}
+          description={schema.description || null}
           items={schema.items}
           defs={defs}
           value={value}
@@ -282,7 +331,7 @@ const Field = (props: FieldProps) => {
 
     if (typeof newValue === "object") {
       // Is it an array?
-      if(Object.prototype.toString.call(newValue) === '[object Array]') {
+      if (Object.prototype.toString.call(newValue) === "[object Array]") {
         setValue([...newValue]);
         return;
       }
