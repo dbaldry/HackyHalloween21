@@ -12,6 +12,15 @@ import {
   Tooltip,
   TextLink,
   Tag,
+  FieldGroup,
+  Select,
+  Option,
+  EditorToolbar,
+  Table,
+  TableBody,
+  TableRow,
+  TableCell,
+  TableHead,
 } from "@contentful/forma-36-react-components";
 import { FieldExtensionSDK } from "@contentful/app-sdk";
 import { createClient } from "contentful-management";
@@ -107,75 +116,62 @@ function SchemaArray({
             </Tooltip>
           )}
         </FormLabel>
-        {entries.map((val, index) => (
-          <>
-            {/* Handle basic field types */}
-            {typeof items.type !== "undefined" && (
-              <Flex
-                flexWrap="nowrap"
-                marginBottom="spacingXs"
-                alignItems="center"
-              >
-                <Flex flexGrow="1" paddingRight="spacingS">
-                  <SchemaForm
-                    schema={items}
-                    defs={defs}
-                    value={val}
-                    onChange={(newValue) => handleChange(newValue, index)}
-                    noSpacing
-                  />
-                </Flex>
-                <Flex>
+        <Table>
+          <TableBody>
+            {entries.map((val, index) => (
+              <TableRow>
+                <TableCell style={{ width: "99%" }}>
+                  {/* Handle basic field types */}
+                  {typeof items.type !== "undefined" && (
+                    <SchemaForm
+                      schema={items}
+                      defs={defs}
+                      value={val}
+                      onChange={(newValue) => handleChange(newValue, index)}
+                      noSpacing
+                    />
+                  )}
+
+                  {/* Handle complex field types */}
+                  {typeof items.$ref !== "undefined" && (
+                    <SchemaForm
+                      schema={defs[items.$ref.split("/").at(-1)]}
+                      defs={defs}
+                      value={val}
+                      onChange={(newValue) => handleChange(newValue, index)}
+                      inline
+                    />
+                  )}
+                </TableCell>
+                <TableCell style={{ textAlign: "right" }}>
                   <Button
-                    icon="Minus"
+                    icon="Delete"
                     buttonType="muted"
+                    size="small"
                     onClick={() => {
                       handleRemoveItem(index);
                     }}
-                  />
-                </Flex>
-              </Flex>
-            )}
-
-            {/* Handle complex field types */}
-            {typeof items.$ref !== "undefined" && (
-              <Flex marginBottom="spacingXs" flexGrow="1">
-                <Card style={{ flexGrow: "1" }}>
-                  <Flex flexWrap="wrap" marginBottom="spacingXs">
-                    <Flex flexGrow="1" paddingRight="spacingS">
-                      <SchemaForm
-                        schema={defs[items.$ref.split("/").at(-1)]}
-                        defs={defs}
-                        value={val}
-                        onChange={(newValue) => handleChange(newValue, index)}
-                        inline
-                      />
-                    </Flex>
-                    <Flex flexGrow="0">
-                      <Button
-                        icon="Minus"
-                        buttonType="muted"
-                        onClick={() => {
-                          handleRemoveItem(index);
-                        }}
-                      />
-                    </Flex>
-                  </Flex>
-                </Card>
-              </Flex>
-            )}
-          </>
-        ))}
-        <Flex flexWrap="nowrap">
-          <Button
-            icon="Plus"
-            size="small"
-            buttonType="primary"
-            onClick={handleAddItem}
-          >
-            Add
-          </Button>
-        </Flex>
+                  >
+                    Remove
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+            <TableRow>
+              <TableCell style={{ background: "#e7ebee" }} colSpan="2">
+                <Button
+                  icon="Plus"
+                  size="small"
+                  buttonType="primary"
+                  isFullWidth={false}
+                  onClick={handleAddItem}
+                >
+                  Add
+                </Button>
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
       </Flex>
     </Flex>
   );
@@ -291,6 +287,17 @@ function SchemaForm({
 }
 
 function schemaGetInitialValue(schema) {
+  return schemaBuild("helloWorld", schemaGen(schema));
+}
+
+function schemaBuild(schemaName, data) {
+  return {
+    schema: schemaName,
+    data,
+  };
+}
+
+function schemaGen(schema) {
   switch (schema.type) {
     case "string":
     case "number":
@@ -301,9 +308,7 @@ function schemaGetInitialValue(schema) {
       const objToReturn = {};
       const keys = Object.keys(schema.properties);
       for (var i = 0; i < keys.length; i++) {
-        objToReturn[keys[i]] = schemaGetInitialValue(
-          schema.properties[keys[i]]
-        );
+        objToReturn[keys[i]] = schemaGen(schema.properties[keys[i]]);
       }
       return objToReturn;
     case "array":
@@ -323,25 +328,34 @@ const Field = (props: FieldProps) => {
   // See if we already have a field value
   const initialValue = sdk.field.getValue();
 
+  console.log(initialValue);
+
   const [value, setValue] = useState(initialValue);
+  const [schemas, setSchemas] = useState([]);
+  const [jsonEditorConfig, setJsonEditorConfig] = useState();
 
   const handleChange = (newValue) => {
+    // Add the extra json
+    newValue = schemaBuild(jsonEditorConfig.schemaName, newValue);
+
     // Set the field value first
     sdk.field.setValue(newValue).then(console.log).catch(console.log);
 
-    if (typeof newValue === "object") {
-      // Is it an array?
-      if (Object.prototype.toString.call(newValue) === "[object Array]") {
-        setValue([...newValue]);
-        return;
-      }
+    // if (typeof newValue === "object") {
+    //   // Is it an array?
+    //   if (Object.prototype.toString.call(newValue) === "[object Array]") {
+    //     setValue([...newValue]);
+    //     return;
+    //   }
 
-      // It must be an object then
-      setValue({ ...newValue });
-      return;
-    }
+    //   // It must be an object then
+    //   setValue({ ...newValue });
+    //   return;
+    // }
 
-    // String or number or bool can be handled like this
+    // // String or number or bool can be handled like this
+    // setValue(newValue);
+
     setValue(newValue);
   };
 
@@ -349,8 +363,6 @@ const Field = (props: FieldProps) => {
   window.startAutoResizer();
 
   const thisFieldId = sdk.field.id;
-
-  let [jsonEditorConfig, setJsonEditorConfig] = useState({ JSONSchema: {} });
 
   const cma = createClient(
     { apiAdapter: sdk.cmaAdapter },
@@ -368,31 +380,85 @@ const Field = (props: FieldProps) => {
     cma.entry
       .getMany({ query: { content_type: "jsonSchema" } })
       .then((data) => {
-        let arrItems = data.items;
-        let jsonEntry = arrItems.filter((item) => {
-          return item.fields.title["en-US"] === thisFieldId;
-        });
+        // Create the list of Schemas
+        setSchemas(data.items);
 
-        if (jsonEntry.length === 1) {
-          // Set the initial value if necessary
-          setValue(
-            sdk.field.getValue() ||
-              schemaGetInitialValue(jsonEntry[0].fields.schema["en-US"])
-          );
+        // let arrItems = data.items;
+        // let jsonEntry = arrItems.filter((item) => {
+        //   return item.fields.title["en-US"] === thisFieldId;
+        // });
+
+        // if (jsonEntry.length === 1) {
+        //   // Set the initial value if necessary
+        //   setValue(
+        //     sdk.field.getValue() ||
+        //       schemaGetInitialValue(jsonEntry[0].fields.schema["en-US"])
+        //   );
+        //   setJsonEditorConfig({
+        //     JSONSchema: jsonEntry[0].fields.schema["en-US"],
+        //   });
+        // }
+
+        // Initial setup if we have content already
+        if(value) {
+          const item = data.items.filter(i => i.fields.title["en-US"] === value.schema);
           setJsonEditorConfig({
-            JSONSchema: jsonEntry[0].fields.schema["en-US"],
+            schemaName: value.schema,
+            JSONSchema: item[0].fields.schema["en-US"]
           });
         }
       })
       .catch((error) => console.log(error.message));
-  }, []);
+  }, []);  
+
+  const handleChooseSchema = (e) => {
+    const schemaName = e.target.value;
+
+    // Find the schema in the array
+    const schema = schemas.filter((item) => {
+      return item.fields.title["en-US"] === schemaName;
+    });
+
+    // Because we're changing the schema we need to reset the value of the field
+    setValue(
+      schemaGetInitialValue(schema[0].fields.schema["en-US"])
+    );
+
+    setJsonEditorConfig({
+      schemaName: schema[0].fields.title["en-US"],
+      JSONSchema: schema[0].fields.schema["en-US"],
+    });
+  };
 
   return (
-    <SchemaForm
-      schema={jsonEditorConfig.JSONSchema}
-      onChange={handleChange}
-      value={value}
-    />
+    <div style={{ marginTop: "0.5rem" }}>
+      <EditorToolbar>
+        <Select width="medium" value={value ? value.schema : ""} onChange={handleChooseSchema}>
+          <Option>Choose Data Type</Option>
+          <Option>---</Option>
+          {schemas.map((schema) => (
+            <Option>{schema.fields.title["en-US"]}</Option>
+          ))}
+        </Select>
+      </EditorToolbar>
+      {jsonEditorConfig && (
+        <div
+          style={{
+            border: "1px solid #aec1cc",
+            borderTop: "none",
+            padding: "1rem",
+            borderRadius: "0 0 6px 6px",
+            paddingBottom: "-20px",
+          }}
+        >
+          <SchemaForm
+            schema={jsonEditorConfig.JSONSchema}
+            onChange={handleChange}
+            value={value.data}
+          />
+        </div>
+      )}
+    </div>
   );
 };
 
